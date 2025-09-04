@@ -61,8 +61,6 @@ losses = argbind.bind_module(dac.nn.loss, filter_fn=filter_fn)
 def get_infinite_loader(dataloader):
     while True:
         for batch in dataloader:
-            
-            print(f"BATCH IN INFINITE LOADER: {batch}")
             yield batch
 
 
@@ -92,13 +90,8 @@ def build_dataset(
     # cycles through them.
     datasets = []
     
-    print(f"FOLDERS: {folders}")
-    
     for _, v in folders.items():
         loader = AudioLoader(sources=v)
-        
-        print(f"FILES FOUND: {loader.audio_lists}")
-        
         transform = build_transform()
         dataset = AudioDataset(loader, sample_rate, transform=transform)
         datasets.append(dataset)
@@ -222,12 +215,14 @@ def val_loop(batch, state, accel):
     out = state.generator(signal.audio_data, signal.sample_rate)
     recons = AudioSignal(out["audio"], signal.sample_rate)
 
-    return {
+    x = {
         "loss": state.mel_loss(recons, signal),
         "mel/loss": state.mel_loss(recons, signal),
         "stft/loss": state.stft_loss(recons, signal),
         "waveform/loss": state.waveform_loss(recons, signal),
     }
+    
+    return x
 
 
 @timer()
@@ -272,7 +267,7 @@ def train_loop(state, batch, accel, lambdas):
         output["vq/codebook_loss"] = codebook_loss
         output["loss"] = sum([v * output[k] for k, v in lambdas.items() if k in output])
 
-    state.optimizer_g.zero_grad()
+    state.optimizer_g.zero_grad()    
     accel.backward(output["loss"])
     accel.scaler.unscale_(state.optimizer_g)
     output["other/grad_norm"] = torch.nn.utils.clip_grad_norm_(
@@ -386,7 +381,7 @@ def train(
         writer=writer, log_file=f"{save_path}/log.txt", rank=accel.local_rank
     )
 
-    state = load(args, accel, tracker, save_path)
+    state = load(args, accel, tracker, save_path)    
     train_dataloader = accel.prepare_dataloader(
         state.train_data,
         start_idx=state.tracker.step * batch_size,
@@ -394,8 +389,6 @@ def train(
         batch_size=batch_size,
         collate_fn=state.train_data.collate,
     )
-    
-    print(f"TRAIN DATALOADER: {train_dataloader}")
     
     train_dataloader = get_infinite_loader(train_dataloader)
     val_dataloader = accel.prepare_dataloader(
@@ -422,8 +415,6 @@ def train(
 
     with tracker.live:
         for tracker.step, batch in enumerate(train_dataloader, start=tracker.step):
-            
-            print(f"BATCH: {batch}")
             
             train_loop(state, batch, accel, lambdas)
 

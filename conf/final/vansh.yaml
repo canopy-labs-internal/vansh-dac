@@ -73,7 +73,7 @@ batch_size: 72
 train/AudioDataset.duration: 0.38
 train/AudioDataset.n_examples: 10000000
 
-val/AudioDataset.duration: 5.0
+val/AudioDataset.duration: 0.5
 val/build_transform.augment_prob: 1.0
 val/AudioDataset.n_examples: 250
 
@@ -87,6 +87,8 @@ AudioDataset.without_replacement: true
 train/build_dataset.folders:
   speech_fb:
     - /workspace/dac-datasets/DAPS/daps-download/daps/clean/
+    - /workspace/dac-datasets/DAPS/daps-download/daps/clean/
+
 
 val/build_dataset.folders:
   speech_fb:

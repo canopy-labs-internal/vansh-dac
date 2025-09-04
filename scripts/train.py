@@ -292,7 +292,7 @@ def checkpoint(state, save_iters, save_path):
         state.tracker.print(f"Best generator so far")
         tags.append("best")
     if state.tracker.step in save_iters:
-        tags.append(f"{state.tracker.step // 1000}k")
+        tags.append(f"{state.tracker.step}k")
 
     for tag in tags:
         generator_extra = {

@@ -61,6 +61,8 @@ losses = argbind.bind_module(dac.nn.loss, filter_fn=filter_fn)
 def get_infinite_loader(dataloader):
     while True:
         for batch in dataloader:
+            
+            print(f"BATCH IN INFINITE LOADER: {batch}")
             yield batch
 
 
@@ -89,8 +91,14 @@ def build_dataset(
     # Concatenate the datasets with ConcatDataset, which
     # cycles through them.
     datasets = []
+    
+    print(f"FOLDERS: {folders}")
+    
     for _, v in folders.items():
         loader = AudioLoader(sources=v)
+        
+        print(f"FILES FOUND: {loader.audio_lists}")
+        
         transform = build_transform()
         dataset = AudioDataset(loader, sample_rate, transform=transform)
         datasets.append(dataset)
@@ -386,6 +394,9 @@ def train(
         batch_size=batch_size,
         collate_fn=state.train_data.collate,
     )
+    
+    print(f"TRAIN DATALOADER: {train_dataloader}")
+    
     train_dataloader = get_infinite_loader(train_dataloader)
     val_dataloader = accel.prepare_dataloader(
         state.val_data,
@@ -411,6 +422,9 @@ def train(
 
     with tracker.live:
         for tracker.step, batch in enumerate(train_dataloader, start=tracker.step):
+            
+            print(f"BATCH: {batch}")
+            
             train_loop(state, batch, accel, lambdas)
 
             last_iter = (

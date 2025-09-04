@@ -57,7 +57,7 @@ def process(
     get_split = None
     get_value = lambda path: path
 
-    data_path = pathlib.Path("/data")
+    data_path = pathlib.Path("/mnt/disks/prepare-dac/")
     dataset_path = data_path / dataset
     audio_files = util.find_audio(dataset_path)
 

@@ -36,8 +36,18 @@ def save_test_set(args, accel, sample_rate: int = 44100, output: str = "samples/
         writer.writeheader()
 
         with tracker.live:
+            import warnings, os, traceback  # noqa: WPS433
             for i in range(len(test_data)):
-                signal = process(test_data[i], accel, test_data)
+                try:
+                    signal = process(test_data[i], accel, test_data)
+                except Exception as e:  # noqa: BLE001
+                    warnings.warn(
+                        f"Skipping test sample {i} due to data error: {e}",
+                        RuntimeWarning,
+                    )
+                    if bool(int(os.getenv("DEBUG_DATA_ERRORS", 0))):
+                        traceback.print_exc()
+                    continue
                 input_path = output.parent / "input" / f"sample_{i}.wav"
                 metadata = {
                     "path": str(input_path),

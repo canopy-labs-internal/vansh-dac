@@ -59,9 +59,37 @@ losses = argbind.bind_module(dac.nn.loss, filter_fn=filter_fn)
 
 
 def get_infinite_loader(dataloader):
+    """Return an infinite generator over *dataloader* that is resilient to
+    data-loading errors.
+
+    Occasionally an audio file can be empty or corrupted which causes
+    audiotools (or torchaudio) to raise an exception during dataset
+    iteration.  To keep training running uninterrupted we catch those
+    exceptions, emit a warning and simply skip the faulty batch.
+    
+    If the environment variable ``DEBUG_DATA_ERRORS`` is set to 1 the full
+    traceback will be printed to aid debugging.
+    """
+    import traceback
+
     while True:
-        for batch in dataloader:
-            yield batch
+        iterator = iter(dataloader)
+        while True:
+            try:
+                batch = next(iterator)
+                yield batch
+            except StopIteration:
+                # Restart the DataLoader for the next epoch.
+                break
+            except Exception as e:  # noqa: BLE001
+                # Skip problematic batch and continue.
+                warnings.warn(
+                    f"Data loading error encountered and skipped: {e}",
+                    RuntimeWarning,
+                )
+                if bool(int(os.getenv("DEBUG_DATA_ERRORS", 0))):
+                    traceback.print_exc()
+                continue
 
 
 @argbind.bind("train", "val")
@@ -341,8 +369,19 @@ def save_samples(state, val_idx, writer):
 
 
 def validate(state, val_dataloader, accel):
+    """Run validation, skipping batches that raise data-loading errors."""
+    output = None
     for batch in val_dataloader:
-        output = val_loop(batch, state, accel)
+        try:
+            output = val_loop(batch, state, accel)
+        except Exception as e:  # noqa: BLE001
+            warnings.warn(
+                f"Validation batch skipped due to data error: {e}",
+                RuntimeWarning,
+            )
+            if bool(int(os.getenv("DEBUG_DATA_ERRORS", 0))):
+                import traceback; traceback.print_exc()
+            continue
     # Consolidate state dicts if using ZeroRedundancyOptimizer
     if hasattr(state.optimizer_g, "consolidate_state_dict"):
         state.optimizer_g.consolidate_state_dict()

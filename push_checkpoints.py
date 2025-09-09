@@ -2,9 +2,9 @@ from pathlib import Path
 import os
 from huggingface_hub import HfApi, create_repo
 
-FOLDER_TO_PUSH = Path("/home/vansh/dac-recreate/runs/vansh/10000k").resolve()
+FOLDER_TO_PUSH = Path("/home/vansh/dac-recreate/runs/vansh/120000k").resolve()
 HF_USERNAME = "vanshjjw"  # change if needed
-REPO_NAME = f"dac-checkpoints-10k"
+REPO_NAME = f"dac-checkpoints-9k"
 REPO_ID = f"{HF_USERNAME}/{REPO_NAME}"
 
 api = HfApi()  

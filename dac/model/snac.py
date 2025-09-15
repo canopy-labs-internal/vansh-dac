@@ -10,8 +10,10 @@ from torch import nn
 from .layers import Encoder, Decoder
 from .vq import ResidualVectorQuantize
 
+from audiotools.ml import BaseModel
+from .base import CodecMixin
 
-class SNAC(nn.Module):
+class SNAC(BaseModel, CodecMixin):
     def __init__(
         self,
         sampling_rate=24000,

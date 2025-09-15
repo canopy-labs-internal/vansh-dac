@@ -13,4 +13,5 @@ from . import nn
 from . import model
 from . import utils
 from .model.dac import DAC
+from .model.snac import SNAC
 from .model import DACFile

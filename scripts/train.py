@@ -41,6 +41,20 @@ def ExponentialLR(optimizer, gamma: float = 1.0):
 DAC = argbind.bind(dac.model.DAC)
 Discriminator = argbind.bind(dac.model.Discriminator)
 
+snac = dac.model.SNAC(
+    sampling_rate=24000,
+    encoder_dim=48,
+    encoder_rates=[2, 4, 8, 8],
+    latent_dim=None,
+    decoder_dim=1024,
+    decoder_rates=[8, 8, 4, 2],
+    codebook_size=4096,
+    codebook_dim=8,
+    vq_strides=[4, 2, 1],
+    noise=True,
+    depthwise=True,
+)
+
 # Data
 AudioDataset = argbind.bind(AudioDataset, "train", "val")
 AudioLoader = argbind.bind(AudioLoader, "train", "val")
@@ -177,20 +191,6 @@ def load(
 
     # generator = DAC() if generator is None else generator
     
-    snac = dac.model.SNAC(
-        sampling_rate=24000,
-        encoder_dim=48,
-        encoder_rates=[2, 4, 8, 8],
-        latent_dim=None,
-        decoder_dim=1024,
-        decoder_rates=[8, 8, 4, 2],
-        codebook_size=4096,
-        codebook_dim=8,
-        vq_strides=[4, 2, 1],
-        noise=True,
-        depthwise=True,
-    )
-    
     generator = snac if generator is None else generator
     discriminator = Discriminator() if discriminator is None else discriminator
 
@@ -219,7 +219,7 @@ def load(
     if "scheduler.pth" in d_extra:
         scheduler_d.load_state_dict(d_extra["scheduler.pth"])
 
-    sample_rate = accel.unwrap(generator).sample_rate
+    sample_rate = accel.unwrap(generator).sampling_rate
     with argbind.scope(args, "train"):
         train_data = build_dataset(sample_rate)
     with argbind.scope(args, "val"):

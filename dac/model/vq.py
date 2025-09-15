@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
 
-from snac.layers import WNConv1d
+from .layers import WNConv1d
 
 
 class VectorQuantize(nn.Module):

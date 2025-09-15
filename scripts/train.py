@@ -175,7 +175,23 @@ def load(
         if (Path(kwargs["folder"]) / "discriminator").exists():
             discriminator, d_extra = Discriminator.load_from_folder(**kwargs)
 
-    generator = DAC() if generator is None else generator
+    # generator = DAC() if generator is None else generator
+    
+    snac = dac.model.SNAC(
+        sampling_rate=24000,
+        encoder_dim=48,
+        encoder_rates=[2, 4, 8, 8],
+        latent_dim=None,
+        decoder_dim=1024,
+        decoder_rates=[8, 8, 4, 2],
+        codebook_size=4096,
+        codebook_dim=8,
+        vq_strides=[4, 2, 1],
+        noise=True,
+        depthwise=True,
+    )
+    
+    generator = snac if generator is None else generator
     discriminator = Discriminator() if discriminator is None else discriminator
 
     tracker.print(generator)

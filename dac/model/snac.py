@@ -82,27 +82,75 @@ class SNAC(nn.Module):
         audio_data = nn.functional.pad(audio_data, (0, right_pad))
         return audio_data
 
-    def forward(self, audio_data: torch.Tensor):
-        length = audio_data.shape[-1]
-        audio_data = self.preprocess(audio_data)
-        
-        z_q, codes, commitment_loss, codebook_loss = self.encode(audio_data)
-        
-        audio_hat = self.decoder(z_q)
-        
-        return audio_hat[..., :length], z_q, codes, commitment_loss, codebook_loss
+    # The forward signature now mirrors `dac.model.DAC.forward` so that existing
+    # training/validation loops can use SNAC as a drop-in replacement.
+    def forward(
+        self,
+        audio_data: torch.Tensor,
+        sample_rate: int | None = None,
+        n_quantizers: int | None = None,
+    ) -> dict:
+        """Forward pass compatible with scripts/train.py.
 
-    def encode(self, audio_data: torch.Tensor) -> Tuple[List[torch.Tensor], torch.Tensor, Dict[str, torch.Tensor]]:
+        Parameters
+        ----------
+        audio_data : torch.Tensor [B x 1 x T]
+            Input waveform.
+        sample_rate : int | None
+            Ignored but kept for API compatibility (trainer always passes it).
+        n_quantizers : int | None
+            How many quantisers to use; forwarded to RVQ.
+
+        Returns
+        -------
+        dict
+            Same keys as DAC.forward so that the trainer does not need to
+            change. "latents" is the pre-quantisation encoder output.
+        """
+        length = audio_data.shape[-1]
+
+        # Preprocess/pad so that hop_length divides length.
         audio_data = self.preprocess(audio_data)
-        z = self.encoder(audio_data)
-        z_q, codes, commitment_loss, codebook_loss = self.quantizer(z)
+
+        # Encode ↦ Quantise ↦ Decode
+        z_q, codes, latents, commitment_loss, codebook_loss = self.encode(
+            audio_data, n_quantizers=n_quantizers
+        )
+
+        audio_hat = self.decoder(z_q)
+
+        return {
+            "audio": audio_hat[..., :length],
+            "z": z_q,
+            "codes": codes,
+            "latents": latents,
+            "vq/commitment_loss": commitment_loss,
+            "vq/codebook_loss": codebook_loss,
+        }
+
+    def encode(
+        self,
+        audio_data: torch.Tensor,
+        n_quantizers: int | None = None,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Encode audio and return representations matching DAC.encode."""
+        audio_data = self.preprocess(audio_data)
+        latents = self.encoder(audio_data)
+
+        z_q, codes, commitment_loss, codebook_loss = self.quantizer(
+            latents, n_quantizers=n_quantizers
+        )
         
-        return z_q, codes, commitment_loss, codebook_loss
+        return z_q, codes, latents, commitment_loss, codebook_loss
 
     def decode(self, codes: List[torch.Tensor]) -> torch.Tensor:
         z_q = self.quantizer.from_codes(codes)
         audio_hat = self.decoder(z_q)
         return audio_hat
+
+    @property
+    def device(self):
+        return next(self.parameters()).device
 
     def get_codebook_usage_stats(self) -> Dict[str, float]:
         """Get codebook usage statistics from all quantizers"""

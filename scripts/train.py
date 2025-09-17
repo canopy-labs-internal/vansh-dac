@@ -347,7 +347,7 @@ def checkpoint(state, save_iters, save_path):
         }
         accel.unwrap(state.generator).metadata = metadata
         accel.unwrap(state.generator).save_to_folder(
-            f"{save_path}/{tag}", generator_extra
+            f"{save_path}/{tag}", generator_extra, False
         )
         discriminator_extra = {
             "optimizer.pth": state.optimizer_d.state_dict(),
